@@ -274,4 +274,4 @@ action boundary inspectable, boring, and governable.
 
 ## License
 
-MIT.
+HSSL.
