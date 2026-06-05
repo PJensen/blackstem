@@ -1,0 +1,502 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Blackstem Demo</title>
+    <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
+    <style>
+      :root {
+        --bg: #edf3f0;
+        --surface: #fbfdfc;
+        --surface-soft: #f4f8f6;
+        --ink: #05080b;
+        --muted: #52615c;
+        --line: rgba(5, 8, 11, 0.12);
+        --line-strong: rgba(5, 8, 11, 0.2);
+        --accent: #199c7e;
+        --accent-bright: #48f0bd;
+        --accent-dark: #0f6c59;
+        --danger: #b84c31;
+        --shadow: 0 18px 44px rgba(5, 8, 11, 0.1);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: Inter, "IBM Plex Sans", "Avenir Next", system-ui, sans-serif;
+        color: var(--ink);
+        background:
+          linear-gradient(180deg, rgba(5, 8, 11, 0.04), transparent 180px),
+          linear-gradient(135deg, #f9fcfb 0%, var(--bg) 100%);
+      }
+
+      main {
+        width: min(1120px, calc(100vw - 32px));
+        margin: 0 auto;
+        padding: 24px 0 48px;
+        display: grid;
+        gap: 14px;
+      }
+
+      .panel {
+        background: rgba(251, 253, 252, 0.92);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        box-shadow: var(--shadow);
+        backdrop-filter: blur(10px);
+      }
+
+      .hero,
+      .controls,
+      .stage-panel,
+      .tool-panel {
+        padding: 22px;
+      }
+
+      h1,
+      h2 {
+        margin: 0;
+        font-weight: 760;
+        letter-spacing: 0;
+      }
+
+      h1 {
+        font-size: clamp(2rem, 4vw, 3.4rem);
+        line-height: 0.95;
+      }
+
+      h2 {
+        font-size: 1rem;
+      }
+
+      p {
+        margin: 0;
+        color: var(--muted);
+        line-height: 1.55;
+      }
+
+      .hero {
+        display: grid;
+        gap: 14px;
+        background: var(--ink);
+        color: #f8fffc;
+        overflow: hidden;
+        position: relative;
+      }
+
+      .hero p {
+        max-width: 68ch;
+        color: rgba(248, 255, 252, 0.72);
+      }
+
+      .brand-lockup {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        min-width: 0;
+      }
+
+      .brand-mark {
+        width: 54px;
+        height: 54px;
+        flex: 0 0 auto;
+        border-radius: 8px;
+        background: #f8fffc;
+        box-shadow: 0 0 0 1px rgba(72, 240, 189, 0.24);
+      }
+
+      .brand-kicker {
+        margin: 0 0 6px;
+        color: var(--accent-bright);
+        font-size: 0.76rem;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.12em;
+      }
+
+      .controls {
+        display: grid;
+        gap: 14px;
+      }
+
+      .prompt-row {
+        display: grid;
+        gap: 12px;
+        grid-template-columns: 1fr auto auto;
+        align-items: end;
+      }
+
+      label {
+        display: grid;
+        gap: 8px;
+        font-size: 0.9rem;
+        color: var(--muted);
+        font-weight: 700;
+      }
+
+      textarea,
+      button,
+      pre {
+        font: inherit;
+      }
+
+      textarea {
+        width: 100%;
+        min-height: calc(2lh + 28px);
+        resize: vertical;
+        border-radius: 8px;
+        border: 1px solid var(--line-strong);
+        background: #ffffff;
+        color: var(--ink);
+        padding: 14px 16px;
+        line-height: 1.45;
+        outline: none;
+      }
+
+      textarea:focus {
+        border-color: var(--accent);
+        box-shadow: 0 0 0 3px rgba(25, 156, 126, 0.16);
+      }
+
+      button {
+        border: 0;
+        border-radius: 8px;
+        padding: 0 14px;
+        cursor: pointer;
+        transition: transform 120ms ease, background 120ms ease, opacity 120ms ease;
+        font-weight: 760;
+      }
+
+      .prompt-row button {
+        min-height: 42px;
+        align-self: end;
+      }
+
+      button:hover {
+        transform: translateY(-1px);
+      }
+
+      .primary {
+        background: var(--accent);
+        color: white;
+      }
+
+      .secondary {
+        background: rgba(5, 8, 11, 0.08);
+        color: var(--ink);
+      }
+
+      .examples {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+
+      .examples button {
+        padding: 9px 12px;
+        background: var(--surface-soft);
+        border: 1px solid var(--line);
+        color: #26312d;
+      }
+
+      .examples-divider {
+        width: 100%;
+        margin: 2px 0;
+        border: 0;
+        border-top: 1px solid var(--line);
+      }
+
+      .stage-panel {
+        display: grid;
+        gap: 18px;
+      }
+
+      .stage {
+        position: relative;
+        min-height: 420px;
+        overflow: hidden;
+        border-radius: 8px;
+        border: 1px solid var(--line-strong);
+        background:
+          linear-gradient(rgba(5, 8, 11, 0.045) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(5, 8, 11, 0.045) 1px, transparent 1px),
+          linear-gradient(180deg, #edf8f4 0%, #e7f0ef 60%, #d8dfdc 60%, #cbd3d0 100%);
+        background-size: 32px 32px, 32px 32px, auto;
+      }
+
+      .stage::before {
+        content: "";
+        position: absolute;
+        inset: auto 18px 84px;
+        height: 3px;
+        border-radius: 8px;
+        background: rgba(5, 8, 11, 0.2);
+      }
+
+      .shape-wrap {
+        position: absolute;
+        bottom: 86px;
+        transition: transform 320ms ease;
+        will-change: transform;
+        display: grid;
+        justify-items: center;
+        gap: 10px;
+      }
+
+      .shape {
+        width: 92px;
+        height: 92px;
+        box-shadow:
+          inset -10px -12px 20px rgba(0, 0, 0, 0.14),
+          0 18px 30px rgba(5, 8, 11, 0.22);
+        transition: transform 260ms ease, background 220ms ease;
+        will-change: transform, background;
+        background: var(--shape-color, hsl(1 85% 66%));
+      }
+
+      .shape--ball {
+        border-radius: 50%;
+      }
+
+      .shape--circle {
+        border-radius: 50%;
+      }
+
+      .shape--square {
+        border-radius: 8px;
+      }
+
+      .shape--triangle {
+        clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
+      }
+
+      .shape-label {
+        padding: 5px 10px;
+        border-radius: 8px;
+        background: rgba(251, 253, 252, 0.92);
+        border: 1px solid var(--line);
+        color: var(--ink);
+        font-size: 0.78rem;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+      }
+
+      .status {
+        min-height: 24px;
+        font-weight: 600;
+        color: var(--accent-dark);
+      }
+
+      .rules {
+        display: grid;
+        gap: 10px;
+      }
+
+      .rules h3 {
+        margin: 0;
+        font-size: 0.78rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--muted);
+      }
+
+      .rules-list {
+        display: grid;
+        gap: 8px;
+      }
+
+      .rule-row,
+      .rule-empty {
+        border-radius: 8px;
+        border: 1px solid var(--line);
+        background: var(--surface-soft);
+      }
+
+      .rule-row {
+        display: grid;
+        grid-template-columns: auto 1fr auto;
+        gap: 10px;
+        align-items: center;
+        padding: 10px 12px;
+        cursor: pointer;
+      }
+
+      .rule-row--true {
+        border-color: rgba(25, 156, 126, 0.42);
+        background: rgba(72, 240, 189, 0.14);
+      }
+
+      .rule-row--editing {
+        outline: 2px solid rgba(25, 156, 126, 0.36);
+        outline-offset: 2px;
+      }
+
+      .rule-row:focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: 2px;
+      }
+
+      .rule-copy {
+        min-width: 0;
+      }
+
+      .rule-condition {
+        font-weight: 700;
+        overflow-wrap: anywhere;
+      }
+
+      .rule-effect,
+      .rule-state,
+      .rule-empty {
+        color: var(--muted);
+        font-size: 0.86rem;
+      }
+
+      .rule-empty {
+        padding: 12px;
+      }
+
+      .action-log-panel {
+        border-radius: 8px;
+        border: 1px solid var(--line);
+        background: var(--surface-soft);
+        overflow: hidden;
+      }
+
+      .action-log-panel summary {
+        padding: 12px 14px;
+        cursor: pointer;
+        font-weight: 700;
+        color: var(--ink);
+      }
+
+      .action-log {
+        margin: 0;
+        min-height: 124px;
+        border-radius: 0;
+        border-top: 1px solid var(--line);
+        background: #ffffff;
+        color: var(--ink);
+        white-space: pre-wrap;
+      }
+
+      .tool-panel {
+        display: grid;
+        gap: 14px;
+      }
+
+      pre {
+        margin: 0;
+        overflow: auto;
+        border-radius: 8px;
+        background: #05080b;
+        color: #d9fff4;
+        padding: 16px;
+        line-height: 1.5;
+        font-family: "IBM Plex Mono", "SFMono-Regular", monospace;
+        font-size: 0.9rem;
+      }
+
+      .site-footer {
+        color: var(--muted);
+        font-size: 0.82rem;
+        text-align: center;
+      }
+
+      @media (max-width: 900px) {
+        .prompt-row {
+          grid-template-columns: 1fr;
+        }
+
+        .stage {
+          min-height: 360px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <section class="panel hero">
+        <div class="brand-lockup">
+          <img class="brand-mark" src="./favicon.svg" alt="" />
+          <div>
+            <p class="brand-kicker">Compiler playground</p>
+            <h1>Blackstem Demo</h1>
+          </div>
+        </div>
+        <p>
+          Natural language in, explicit shape actions out. Persistent rules, conditional gates, and grouped commands stay visible inside the shape field.
+        </p>
+      </section>
+
+      <section class="panel controls">
+        <div class="prompt-row">
+          <label>
+            Prompt
+            <textarea id="prompt-input" spellcheck="false">when the circle and square are the same color notify me</textarea>
+          </label>
+          <button id="run-button" class="primary" type="button">Run</button>
+          <button id="reset-button" class="secondary" type="button">Reset</button>
+        </div>
+
+        <div class="examples">
+          <button type="button" data-prompt="make all shapes teal and move all shapes up 8%">align all</button>
+          <button type="button" data-prompt="if all shapes are same color make square red and move square up 5% and make square bigger by 5%">branch square</button>
+          <button type="button" data-prompt="if circle and triangle are same size make triangle red and circle blue">split peers</button>
+          <button type="button" data-prompt="make circle bigger by 5% if smaller than square">catch up</button>
+          <button type="button" data-prompt="rotate square if circle is blue">gated rotate</button>
+          <hr class="examples-divider" />
+          <button type="button" data-prompt="when the circle and square are the same color notify me">watch same color</button>
+          <button type="button" data-prompt="when the circle is above the square notify me">watch position</button>
+          <button type="button" data-prompt="when the circle is larger than 100px notify me">watch size</button>
+          <button type="button" data-prompt="reset shapes">reset shapes</button>
+        </div>
+      </section>
+
+      <section class="panel stage-panel">
+        <h2>Shape field</h2>
+        <div class="rules">
+          <h3>Persistent rules</h3>
+          <div class="rules-list" id="rules-list"></div>
+        </div>
+
+        <div class="stage" id="stage">
+          <div class="shape-wrap" data-shape-wrap="circle">
+            <div class="shape shape--circle" data-shape="circle" aria-label="circle entity"></div>
+            <div class="shape-label">Circle</div>
+          </div>
+          <div class="shape-wrap" data-shape-wrap="square">
+            <div class="shape shape--square" data-shape="square" aria-label="square entity"></div>
+            <div class="shape-label">Square</div>
+          </div>
+          <div class="shape-wrap" data-shape-wrap="triangle">
+            <div class="shape shape--triangle" data-shape="triangle" aria-label="triangle entity"></div>
+            <div class="shape-label">Triangle</div>
+          </div>
+        </div>
+
+        <details class="action-log-panel">
+          <summary id="action-log-summary">Action log (0)</summary>
+          <pre id="action-log" class="action-log">No actions executed yet.</pre>
+        </details>
+
+        <div class="status" id="status"></div>
+      </section>
+
+      <section class="panel tool-panel">
+        <h2>Shape tool plan</h2>
+        <pre id="tool-plan">Run a prompt to inspect the filtered shape tool plan.</pre>
+      </section>
+
+      <footer class="site-footer">Copyright (c) 2026 PJensen</footer>
+    </main>
+
+    <script type="module" src="./demo.js"></script>
+  </body>
+</html>
