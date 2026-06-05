@@ -1,7 +1,7 @@
-# blackstem-js
+# blackstem
 
 <p align="center">
-  <img src="./assets/logo.png" alt="blackstem logo" width="160" />
+  <img src="./assets/logo.png" alt="blackstem logo" />
 </p>
 
 `blackstem-js` is a small symbolic compiler for executable tool plans.
