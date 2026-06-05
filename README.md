@@ -67,6 +67,56 @@ flowchart TD
 
 ## Examples
 
+### Generated concept graph
+
+Input:
+
+```txt
+Remind me to check the boiler tomorrow morning.
+```
+
+One generated trace from the demo turns that request into this concept graph:
+
+```mermaid
+flowchart TD
+  request_0010(["Request<br/>UserRequest"])
+  plan_0011[["Plan<br/>ConceptualPlan"]]
+  intent_0012{{"Intent<br/>CreateReminder<br/>source: remind | sourceKind: directive | confidence: 1"}}
+  directive_0013["Directive<br/>Remind<br/>token: remind"]
+  step_0014(["Step<br/>Step:1<br/>order: 1 | operation: Remind | operationKind: directive"])
+  action_0015["Action<br/>Monitor<br/>token: check"]
+  step_0016(["Step<br/>Step:2<br/>order: 2 | operation: Monitor | operationKind: action"])
+  object_0017["Object<br/>PhysicalSystem:boiler<br/>token: boiler | kind: entity"]
+  target_0018["Target<br/>PhysicalSystem:boiler<br/>token: boiler"]
+  target_0019["Target<br/>PhysicalSystem:boiler<br/>token: boiler"]
+  constraint_0020["Constraint<br/>TemporalConstraint"]
+  constraint_0021["Constraint<br/>RelativeDate:tomorrow<br/>token: tomorrow"]
+  constraint_0022["Constraint<br/>TimeBucket:morning<br/>token: morning"]
+  tool_0023[("Tool<br/>scheduler.createWatch<br/>sourceOperation: Monitor")]
+  tool_0024[("Tool<br/>calendar.createReminder<br/>sourceOperation: CreateReminder")]
+  request_0010 -->|has_plan| plan_0011
+  request_0010 -->|has_intent| intent_0012
+  plan_0011 -->|has_intent| intent_0012
+  request_0010 -->|has_directive| directive_0013
+  intent_0012 -->|has_directive| directive_0013
+  plan_0011 -->|has_step| step_0014
+  step_0014 -->|has_directive| directive_0013
+  request_0010 -->|has_action| action_0015
+  intent_0012 -->|has_action| action_0015
+  plan_0011 -->|has_step| step_0016
+  step_0016 -->|has_action| action_0015
+  intent_0012 -->|has_object| object_0017
+  intent_0012 -->|has_target| target_0018
+  target_0018 -->|refers_to| object_0017
+  intent_0012 -->|has_target| target_0019
+  target_0019 -->|refers_to| object_0017
+  intent_0012 -->|has_constraint| constraint_0020
+  constraint_0020 -->|has_constraint| constraint_0021
+  constraint_0020 -->|has_constraint| constraint_0022
+  intent_0012 -->|compiles_to| tool_0023
+  intent_0012 -->|compiles_to| tool_0024
+```
+
 ### Reminder with temporal normalization
 
 Input:
