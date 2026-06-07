@@ -116,18 +116,47 @@ function initializeDemo(root = document) {
 
   for (const button of elements.exampleButtons) {
     button.addEventListener("click", () => {
-      if (elements.promptInput) elements.promptInput.value = button.dataset.prompt || "";
+      setPromptInput(elements, button.dataset.prompt || "");
       runPrompt(elements, state);
     });
   }
 
   elements.rulesList?.addEventListener("click", event => {
+    const saveButton = event.target.closest("[data-rule-save]");
+    if (saveButton) {
+      const row = saveButton.closest("[data-rule-id]");
+      const editor = row?.querySelector("[data-rule-editor]");
+      saveEditedRule(row?.dataset.ruleId, editor?.value || "", elements, state);
+      return;
+    }
+
+    const cancelButton = event.target.closest("[data-rule-cancel]");
+    if (cancelButton) {
+      cancelEditRule(elements, state);
+      return;
+    }
+
+    if (event.target.closest("[data-rule-editor]")) return;
+
     const row = event.target.closest("[data-rule-id]");
     if (!row) return;
     editRule(row.dataset.ruleId, elements, state);
   });
 
   elements.rulesList?.addEventListener("keydown", event => {
+    const editor = event.target.closest("[data-rule-editor]");
+    if (editor) {
+      if (event.key === "Enter" && !event.shiftKey) {
+        event.preventDefault();
+        saveEditedRule(editor.dataset.ruleEditor, editor.value, elements, state);
+      }
+      if (event.key === "Escape") {
+        event.preventDefault();
+        cancelEditRule(elements, state);
+      }
+      return;
+    }
+
     if (event.key !== "Enter" && event.key !== " ") return;
     const row = event.target.closest("[data-rule-id]");
     if (!row) return;
@@ -143,6 +172,7 @@ function runPrompt(elements, state) {
     return;
   }
 
+  state.editingRuleId = null;
   const result = symbolicTransform(prompt);
   const resetResult = compileResetShapes(prompt, result);
   if (resetResult) {
@@ -358,11 +388,21 @@ function renderRules(elements, state) {
   elements.rulesList.innerHTML = state.rules.map(rule => `
     <div class="rule-row ${rule.lastValue ? "rule-row--true" : ""} ${state.editingRuleId === rule.id ? "rule-row--editing" : ""}" data-rule-id="${escapeHtml(rule.id)}" role="button" tabindex="0">
       <input type="checkbox" ${rule.lastValue ? "checked" : ""} disabled />
-      <div class="rule-copy">
-        <div class="rule-condition">${escapeHtml(rule.condition.label)}</div>
-        <div class="rule-effect">${escapeHtml(rule.effect.label)}</div>
-      </div>
-      <span class="rule-state">${rule.lastValue ? "true" : "watching"}</span>
+      ${state.editingRuleId === rule.id ? `
+        <div class="rule-edit">
+          <input class="rule-editor" data-rule-editor="${escapeHtml(rule.id)}" value="${escapeHtml(rule.source)}" aria-label="Edit watch prompt" />
+          <div class="rule-edit-actions">
+            <button class="secondary" type="button" data-rule-cancel="${escapeHtml(rule.id)}">Cancel</button>
+            <button class="primary" type="button" data-rule-save="${escapeHtml(rule.id)}">Save</button>
+          </div>
+        </div>
+      ` : `
+        <div class="rule-copy">
+          <div class="rule-source">${escapeHtml(rule.source)}</div>
+          <div class="rule-effect">${escapeHtml(rule.condition.label)} -> ${escapeHtml(rule.effect.label)}</div>
+        </div>
+        <span class="rule-state">${rule.lastValue ? "true" : "watching"}</span>
+      `}
     </div>
   `).join("");
 }
@@ -457,6 +497,20 @@ function insertPromptSuggestion(input, word) {
   const cursor = before.length + word.length + spacer.length;
   input.setSelectionRange(cursor, cursor);
   input.focus();
+}
+
+function setPromptInput(elements, value, options = {}) {
+  if (!elements.promptInput) return;
+
+  elements.promptInput.value = value;
+  if (options.focus) {
+    elements.promptInput.focus();
+    if (options.select) {
+      elements.promptInput.setSelectionRange(0, elements.promptInput.value.length);
+    }
+  }
+
+  renderPromptVocabularyAssist(elements);
 }
 
 function currentPromptToken(value, cursor) {
@@ -808,20 +862,63 @@ function editRule(ruleId, elements, state) {
   if (!rule) return;
 
   if (state.editingRuleId === rule.id) {
-    state.editingRuleId = null;
-    renderRules(elements, state);
-    renderStatus(elements, "Rule editing cancelled.");
+    cancelEditRule(elements, state);
     return;
   }
 
   state.editingRuleId = rule.id;
-  if (elements.promptInput) {
-    elements.promptInput.value = rule.source;
-    elements.promptInput.focus();
-    elements.promptInput.setSelectionRange(0, elements.promptInput.value.length);
-  }
   renderRules(elements, state);
-  renderStatus(elements, "Editing rule. Run prompt to replace it.");
+  focusRuleEditor(elements, rule.id);
+  renderStatus(elements, "Editing watch.");
+}
+
+function cancelEditRule(elements, state) {
+  state.editingRuleId = null;
+  renderRules(elements, state);
+  renderStatus(elements, "Watch editing cancelled.");
+}
+
+function saveEditedRule(ruleId, value, elements, state) {
+  const rule = state.rules.find(item => item.id === ruleId);
+  const source = value.trim();
+  if (!rule || !source) {
+    renderStatus(elements, "Enter a watch prompt first.");
+    return;
+  }
+
+  const result = symbolicTransform(source);
+  const compiledRule = compileShapeRule(source, result, state);
+  if (!compiledRule || compiledRule.mode !== "watch") {
+    renderToolPlan(elements, compiledRule?.toolPlan || blockedConditionalToolPlan(source));
+    renderStatus(elements, "Watch edit must start with a supported when prompt.");
+    focusRuleEditor(elements, ruleId);
+    return;
+  }
+
+  rule.source = compiledRule.source;
+  rule.condition = compiledRule.condition;
+  rule.effect = compiledRule.effect;
+  rule.lastValue = false;
+  rule.firedCount = 0;
+  state.editingRuleId = null;
+  state.history.push(`watch updated: ${rule.condition.label} -> ${rule.effect.label}`);
+
+  renderRules(elements, state);
+  renderActionLog(elements, state.history);
+  renderToolPlan(elements, compiledRule.toolPlan);
+  renderStatus(elements, "Watch updated.");
+}
+
+function focusRuleEditor(elements, ruleId) {
+  const editor = elements.rulesList?.querySelector(`[data-rule-editor="${cssEscape(ruleId)}"]`);
+  if (!editor) return;
+  editor.focus();
+  editor.setSelectionRange(0, editor.value.length);
+}
+
+function cssEscape(value) {
+  if (window.CSS?.escape) return window.CSS.escape(String(value));
+  return String(value).replace(/["\\]/g, "\\$&");
 }
 
 function evaluateRules(state) {

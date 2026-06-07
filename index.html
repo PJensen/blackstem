@@ -254,13 +254,6 @@
         color: #26312d;
       }
 
-      .examples-divider {
-        width: 100%;
-        margin: 2px 0;
-        border: 0;
-        border-top: 1px solid var(--line);
-      }
-
       .stage-panel {
         display: grid;
         gap: 18px;
@@ -380,6 +373,10 @@
         cursor: pointer;
       }
 
+      .rule-row > input[type="checkbox"] {
+        pointer-events: none;
+      }
+
       .rule-row--true {
         border-color: rgba(25, 156, 126, 0.42);
         background: rgba(72, 240, 189, 0.14);
@@ -399,6 +396,45 @@
         min-width: 0;
       }
 
+      .rule-edit {
+        display: grid;
+        gap: 8px;
+        min-width: 0;
+        grid-column: 2 / -1;
+      }
+
+      .rule-editor {
+        width: 100%;
+        min-width: 0;
+        border-radius: 8px;
+        border: 1px solid var(--line-strong);
+        background: #ffffff;
+        color: var(--ink);
+        padding: 9px 10px;
+        font: inherit;
+        font-size: 0.88rem;
+        font-weight: 700;
+        outline: none;
+      }
+
+      .rule-editor:focus {
+        border-color: var(--accent);
+        box-shadow: 0 0 0 3px rgba(25, 156, 126, 0.16);
+      }
+
+      .rule-edit-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 8px;
+      }
+
+      .rule-edit-actions button {
+        min-height: 34px;
+        padding: 0 10px;
+        font-size: 0.82rem;
+      }
+
+      .rule-source,
       .rule-condition {
         font-weight: 700;
         overflow-wrap: anywhere;
@@ -581,10 +617,6 @@
           white-space: nowrap;
         }
 
-        .examples-divider {
-          display: none;
-        }
-
         .stage-panel {
           min-height: 0;
           gap: 10px;
@@ -620,6 +652,14 @@
           grid-template-columns: auto minmax(0, 1fr);
         }
 
+        .rule-edit-actions {
+          justify-content: stretch;
+        }
+
+        .rule-edit-actions button {
+          flex: 1 1 0;
+        }
+
         .rule-effect,
         .rule-state {
           display: none;
@@ -627,9 +667,9 @@
 
         .stage {
           --stage-floor: 58px;
-          flex: 1 1 auto;
+          flex: 1 1 230px;
           min-height: 230px;
-          max-height: none;
+          max-height: 48svh;
           background-size: 24px 24px, 24px 24px, auto;
         }
 
@@ -715,7 +755,7 @@
               <span>Prompt</span>
               <span id="vocab-status" class="vocab-status" aria-live="polite">strict vocab</span>
             </span>
-            <textarea id="prompt-input" spellcheck="false">when the circle and square are the same color notify me</textarea>
+            <textarea id="prompt-input" spellcheck="false">make all shapes teal and move all shapes up 8%</textarea>
             <div id="vocab-suggestions" class="vocab-suggestions" aria-label="Supported vocabulary suggestions"></div>
           </label>
           <button id="run-button" class="primary" type="button">Run</button>
@@ -728,17 +768,9 @@
           <button type="button" data-prompt="if circle and triangle are same size make triangle red and circle blue">split peers</button>
           <button type="button" data-prompt="make circle bigger by 5% if smaller than square">catch up</button>
           <button type="button" data-prompt="rotate square if circle is blue">gated rotate</button>
-          <hr class="examples-divider" />
-          <button type="button" data-prompt="when the circle and square are the same color notify me">watch same color</button>
-          <button type="button" data-prompt="when the circle is above the square notify me">watch position</button>
-          <button type="button" data-prompt="when the circle is larger than 100px notify me">watch size</button>
           <button type="button" data-prompt="reset shapes">reset shapes</button>
         </div>
 
-        <div class="rules">
-          <h3>Persistent rules</h3>
-          <div class="rules-list" id="rules-list"></div>
-        </div>
       </section>
 
       <section class="panel stage-panel">
@@ -757,6 +789,11 @@
             <div class="shape shape--triangle" data-shape="triangle" aria-label="triangle entity"></div>
             <div class="shape-label">Triangle</div>
           </div>
+        </div>
+
+        <div class="rules">
+          <h3>Persistent rules</h3>
+          <div class="rules-list" id="rules-list"></div>
         </div>
 
         <details class="action-log-panel">
