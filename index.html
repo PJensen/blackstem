@@ -517,7 +517,7 @@
           position: sticky;
           top: 0;
           z-index: 2;
-          gap: 10px;
+          gap: 8px;
         }
 
         .prompt-row {
@@ -544,6 +544,7 @@
         .vocab-suggestions {
           flex-wrap: nowrap;
           overflow-x: auto;
+          max-height: 34px;
           padding-bottom: 2px;
           scrollbar-width: thin;
         }
@@ -551,6 +552,10 @@
         .vocab-suggestion,
         .vocab-note {
           flex: 0 0 auto;
+        }
+
+        .vocab-suggestion {
+          padding: 5px 8px;
         }
 
         .vocab-note {
@@ -588,7 +593,35 @@
         }
 
         .stage-panel h2,
-        .rules {
+        .rules h3 {
+          display: none;
+        }
+
+        .rules,
+        .rules-list {
+          min-width: 0;
+        }
+
+        .rules-list {
+          display: flex;
+          gap: 8px;
+          overflow-x: auto;
+          padding: 2px 2px 4px;
+          scrollbar-width: thin;
+        }
+
+        .rule-row,
+        .rule-empty {
+          flex: 0 0 min(300px, 82vw);
+          padding: 8px 10px;
+        }
+
+        .rule-row {
+          grid-template-columns: auto minmax(0, 1fr);
+        }
+
+        .rule-effect,
+        .rule-state {
           display: none;
         }
 
@@ -701,14 +734,15 @@
           <button type="button" data-prompt="when the circle is larger than 100px notify me">watch size</button>
           <button type="button" data-prompt="reset shapes">reset shapes</button>
         </div>
-      </section>
 
-      <section class="panel stage-panel">
-        <h2>Shape field</h2>
         <div class="rules">
           <h3>Persistent rules</h3>
           <div class="rules-list" id="rules-list"></div>
         </div>
+      </section>
+
+      <section class="panel stage-panel">
+        <h2>Shape field</h2>
 
         <div class="stage" id="stage">
           <div class="shape-wrap" data-shape-wrap="circle">
