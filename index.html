@@ -139,6 +139,28 @@
         font-weight: 700;
       }
 
+      .prompt-label-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        min-width: 0;
+      }
+
+      .vocab-status {
+        min-width: 0;
+        color: var(--muted);
+        font-size: 0.76rem;
+        font-weight: 760;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .vocab-status--warn {
+        color: var(--danger);
+      }
+
       textarea,
       button,
       pre {
@@ -161,6 +183,34 @@
       textarea:focus {
         border-color: var(--accent);
         box-shadow: 0 0 0 3px rgba(25, 156, 126, 0.16);
+      }
+
+      .vocab-suggestions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        min-height: 0;
+      }
+
+      .vocab-suggestion {
+        padding: 6px 9px;
+        border: 1px solid var(--line);
+        background: var(--surface-soft);
+        color: #26312d;
+        font-size: 0.78rem;
+        font-weight: 760;
+      }
+
+      .vocab-note {
+        width: 100%;
+        padding: 9px 10px;
+        border-radius: 8px;
+        border: 1px solid rgba(184, 76, 49, 0.26);
+        background: rgba(184, 76, 49, 0.08);
+        color: var(--danger);
+        font-size: 0.82rem;
+        font-weight: 700;
+        line-height: 1.35;
       }
 
       button {
@@ -487,6 +537,26 @@
           font-size: 16px;
         }
 
+        .vocab-status {
+          max-width: 54vw;
+        }
+
+        .vocab-suggestions {
+          flex-wrap: nowrap;
+          overflow-x: auto;
+          padding-bottom: 2px;
+          scrollbar-width: thin;
+        }
+
+        .vocab-suggestion,
+        .vocab-note {
+          flex: 0 0 auto;
+        }
+
+        .vocab-note {
+          width: min(320px, 78vw);
+        }
+
         .prompt-row button {
           min-width: 58px;
           min-height: 44px;
@@ -608,8 +678,12 @@
       <section class="panel controls">
         <div class="prompt-row">
           <label>
-            Prompt
+            <span class="prompt-label-row">
+              <span>Prompt</span>
+              <span id="vocab-status" class="vocab-status" aria-live="polite">strict vocab</span>
+            </span>
             <textarea id="prompt-input" spellcheck="false">when the circle and square are the same color notify me</textarea>
+            <div id="vocab-suggestions" class="vocab-suggestions" aria-label="Supported vocabulary suggestions"></div>
           </label>
           <button id="run-button" class="primary" type="button">Run</button>
           <button id="reset-button" class="secondary" type="button">Reset</button>

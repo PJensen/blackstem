@@ -1,4 +1,4 @@
-import { symbolicTransform } from "./src/index.js";
+import { CORE, VOCAB, symbolicTransform } from "./src/index.js";
 
 const ENTITY_ORDER = Object.freeze(["circle", "square", "triangle"]);
 
@@ -6,6 +6,9 @@ const DEFAULT_RULE_PROMPTS = Object.freeze([
   "when the circle is above the square notify me",
   "when the circle and square are the same color notify me",
 ]);
+
+const PROMPT_UNIT_WORDS = Object.freeze(["degree", "degrees", "pixel", "pixels", "px", "percent"]);
+const PROMPT_VOCABULARY = Object.freeze(buildPromptVocabulary());
 
 const INITIAL_ENTITIES = Object.freeze({
   circle: Object.freeze({ x: 36, y: 0, hue: 1, saturation: 85, lightness: 66, scale: 1, rotation: 0 }),
@@ -74,6 +77,8 @@ function initializeDemo(root = document) {
     promptInput: root.querySelector("#prompt-input"),
     runButton: root.querySelector("#run-button"),
     resetButton: root.querySelector("#reset-button"),
+    vocabStatus: root.querySelector("#vocab-status"),
+    vocabSuggestions: root.querySelector("#vocab-suggestions"),
     actionLog: root.querySelector("#action-log"),
     actionLogSummary: root.querySelector("#action-log-summary"),
     rulesList: root.querySelector("#rules-list"),
@@ -92,6 +97,7 @@ function initializeDemo(root = document) {
   renderRules(elements, state);
   renderToolPlan(elements, null);
   renderStatus(elements, "Ready.");
+  installPromptVocabularyAssist(elements);
 
   elements.runButton?.addEventListener("click", () => runPrompt(elements, state));
   elements.promptInput?.addEventListener("keydown", event => {
@@ -374,6 +380,136 @@ function renderStatus(elements, message) {
   if (elements.status) {
     elements.status.textContent = message;
   }
+}
+
+function installPromptVocabularyAssist(elements) {
+  if (!elements.promptInput || !elements.vocabSuggestions) return;
+
+  const update = () => renderPromptVocabularyAssist(elements);
+  elements.promptInput.addEventListener("input", update);
+  elements.promptInput.addEventListener("focus", update);
+  elements.promptInput.addEventListener("click", update);
+  elements.promptInput.addEventListener("keyup", update);
+  elements.promptInput.addEventListener("blur", () => {
+    window.setTimeout(() => elements.vocabSuggestions.replaceChildren(), 120);
+  });
+  elements.vocabSuggestions.addEventListener("mousedown", event => {
+    const button = event.target.closest("[data-vocab-word]");
+    if (!button) return;
+    event.preventDefault();
+    insertPromptSuggestion(elements.promptInput, button.dataset.vocabWord || "");
+    renderPromptVocabularyAssist(elements);
+  });
+
+  update();
+}
+
+function renderPromptVocabularyAssist(elements) {
+  const input = elements.promptInput;
+  const panel = elements.vocabSuggestions;
+  if (!input || !panel) return;
+
+  const token = currentPromptToken(input.value, input.selectionStart || 0);
+  const unknowns = unknownPromptTokens(input.value);
+  const suggestions = token.clean
+    ? PROMPT_VOCABULARY
+      .filter(entry => entry.word.startsWith(token.clean) && entry.word !== token.clean)
+      .slice(0, 8)
+    : [];
+
+  if (elements.vocabStatus) {
+    elements.vocabStatus.textContent = unknowns.length
+      ? `strict vocab: unknown ${unknowns.slice(0, 3).join(", ")}`
+      : "strict vocab";
+    elements.vocabStatus.classList.toggle("vocab-status--warn", unknowns.length > 0);
+  }
+
+  panel.replaceChildren();
+
+  if (suggestions.length) {
+    for (const suggestion of suggestions) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.dataset.vocabWord = suggestion.word;
+      button.className = "vocab-suggestion";
+      button.textContent = `${suggestion.word} · ${suggestion.label}`;
+      panel.append(button);
+    }
+    return;
+  }
+
+  if (token.clean && unknowns.includes(token.clean)) {
+    const note = document.createElement("div");
+    note.className = "vocab-note";
+    note.textContent = `"${token.clean}" is outside the supported vocabulary. Try a listed action, noun, color, direction, or comparator.`;
+    panel.append(note);
+  }
+}
+
+function insertPromptSuggestion(input, word) {
+  if (!word) return;
+
+  const token = currentPromptToken(input.value, input.selectionStart || 0);
+  const before = input.value.slice(0, token.start);
+  const after = input.value.slice(token.end);
+  const nextChar = after[0] || "";
+  const spacer = nextChar && !/\s|[.,!?)]/.test(nextChar) ? " " : "";
+  input.value = `${before}${word}${spacer}${after}`;
+  const cursor = before.length + word.length + spacer.length;
+  input.setSelectionRange(cursor, cursor);
+  input.focus();
+}
+
+function currentPromptToken(value, cursor) {
+  let start = cursor;
+  let end = cursor;
+
+  while (start > 0 && /[a-zA-Z]/.test(value[start - 1])) start--;
+  while (end < value.length && /[a-zA-Z]/.test(value[end])) end++;
+
+  return {
+    start,
+    end,
+    clean: value.slice(start, end).toLowerCase(),
+  };
+}
+
+function unknownPromptTokens(value) {
+  if (!value.trim()) return [];
+  const result = symbolicTransform(value);
+  const ignored = new Set(["ui", "browser", "demo", ...PROMPT_UNIT_WORDS]);
+  return [...new Set(result.symbols
+    .filter(symbol => symbol.kind === VOCAB.kinds.UNKNOWN)
+    .map(symbol => symbol.clean)
+    .filter(clean => /^[a-z]+$/.test(clean) && !ignored.has(clean)))];
+}
+
+function buildPromptVocabulary() {
+  const entries = [];
+  const seen = new Set();
+  const add = (words, label, rank) => {
+    for (const word of words) {
+      if (!/^[a-z]+$/.test(word) || seen.has(word)) continue;
+      seen.add(word);
+      entries.push({ word, label, rank });
+    }
+  };
+
+  add(Object.keys(CORE.actions), "action", 1);
+  add(Object.keys(CORE.directives), "directive", 2);
+  add(Object.keys(CORE.entities), "noun", 3);
+  add(Object.keys(CORE.qualifiers), "qualifier", 4);
+  add(Object.keys(CORE.metrics), "metric", 5);
+  add(Object.keys(CORE.comparatorWords), "comparator", 6);
+  add(Object.keys(CORE.conditionMarkers), "condition", 7);
+  add(Object.keys(CORE.cadence), "cadence", 8);
+  add(Object.keys(CORE.time), "time", 9);
+  add(Object.keys(CORE.conjunctions), "joiner", 10);
+  add(Object.keys(CORE.prepositions), "preposition", 11);
+  add([...CORE.determiners], "determiner", 12);
+  add(PROMPT_UNIT_WORDS, "unit", 13);
+
+  return entries.sort((a, b) => a.rank - b.rank || a.word.localeCompare(b.word));
 }
 
 function resetScene(state) {
