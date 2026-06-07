@@ -77,6 +77,7 @@ function initializeDemo(root = document) {
     actionLog: root.querySelector("#action-log"),
     actionLogSummary: root.querySelector("#action-log-summary"),
     rulesList: root.querySelector("#rules-list"),
+    stage: root.querySelector("#stage"),
     toolPlan: root.querySelector("#tool-plan"),
     status: root.querySelector("#status"),
     shapeWraps: Object.fromEntries(ENTITY_ORDER.map(name => [name, root.querySelector(`[data-shape-wrap="${name}"]`)])),
@@ -85,6 +86,7 @@ function initializeDemo(root = document) {
   };
 
   const state = createDemoState();
+  installStageScaling(elements, state);
   renderScene(elements, state);
   renderActionLog(elements, []);
   renderRules(elements, state);
@@ -294,7 +296,8 @@ function renderScene(elements, state) {
     const wrap = elements.shapeWraps[name];
     const shape = elements.shapes[name];
     if (wrap) {
-      wrap.style.transform = `translate(${entity.x}px, ${-entity.y}px)`;
+      const fieldScale = Number(elements.stage?.dataset.fieldScale || 1);
+      wrap.style.transform = `translate(${round2(entity.x * fieldScale)}px, ${round2(-entity.y * fieldScale)}px) scale(${fieldScale})`;
     }
 
     if (shape) {
@@ -305,6 +308,28 @@ function renderScene(elements, state) {
       shape.style.setProperty("--shape-color", color);
     }
   }
+}
+
+function installStageScaling(elements, state) {
+  if (!elements.stage) return;
+
+  const resizeStage = () => {
+    const availableWidth = elements.stage.clientWidth;
+    const fieldWidth = STAGE_LIMITS.x + 92;
+    const scale = clamp(round2((availableWidth - 24) / fieldWidth), 0.45, 1);
+    elements.stage.style.setProperty("--field-scale", scale);
+    elements.stage.dataset.fieldScale = String(scale);
+    renderScene(elements, state);
+  };
+
+  resizeStage();
+
+  if ("ResizeObserver" in window) {
+    new ResizeObserver(resizeStage).observe(elements.stage);
+    return;
+  }
+
+  window.addEventListener("resize", resizeStage);
 }
 
 function renderActionLog(elements, lines) {
