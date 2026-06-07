@@ -159,6 +159,7 @@ function classifyLexeme(lexeme, index, lexemes) {
   if (CORE.directives[clean]) return symbol(lexeme, VOCAB.kinds.DIRECTIVE, CORE.directives[clean]);
   if (CORE.actions[clean]) return symbol(lexeme, VOCAB.kinds.ACTION, CORE.actions[clean]);
   if (CORE.metrics[clean]) return symbol(lexeme, VOCAB.kinds.METRIC, CORE.metrics[clean]);
+  if (CORE.units[clean]) return symbol(lexeme, VOCAB.kinds.UNIT, CORE.units[clean]);
   if (CORE.entities[clean]) return symbol(lexeme, VOCAB.kinds.ENTITY, CORE.entities[clean]);
   if (CORE.time[clean]) return symbol(lexeme, VOCAB.kinds.TIME, CORE.time[clean]);
   if (CORE.cadence[clean]) return symbol(lexeme, VOCAB.kinds.CADENCE, CORE.cadence[clean]);

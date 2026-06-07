@@ -7,7 +7,6 @@ const DEFAULT_RULE_PROMPTS = Object.freeze([
   "when the circle and square are the same color notify me",
 ]);
 
-const PROMPT_UNIT_WORDS = Object.freeze(["degree", "degrees", "pixel", "pixels", "px", "percent"]);
 const PROMPT_VOCABULARY = Object.freeze(buildPromptVocabulary());
 
 const INITIAL_ENTITIES = Object.freeze({
@@ -477,7 +476,7 @@ function currentPromptToken(value, cursor) {
 function unknownPromptTokens(value) {
   if (!value.trim()) return [];
   const result = symbolicTransform(value);
-  const ignored = new Set(["ui", "browser", "demo", ...PROMPT_UNIT_WORDS]);
+  const ignored = new Set(["ui", "browser", "demo"]);
   return [...new Set(result.symbols
     .filter(symbol => symbol.kind === VOCAB.kinds.UNKNOWN)
     .map(symbol => symbol.clean)
@@ -507,7 +506,7 @@ function buildPromptVocabulary() {
   add(Object.keys(CORE.conjunctions), "joiner", 10);
   add(Object.keys(CORE.prepositions), "preposition", 11);
   add([...CORE.determiners], "determiner", 12);
-  add(PROMPT_UNIT_WORDS, "unit", 13);
+  add(Object.keys(CORE.units || {}), "unit", 13);
 
   return entries.sort((a, b) => a.rank - b.rank || a.word.localeCompare(b.word));
 }
