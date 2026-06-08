@@ -767,7 +767,7 @@ function inferUiCommands(symbols) {
   let activeTarget = "circle";
 
   for (const clause of clauses) {
-    const direction = clause.find(symbol => ["Side:left", "Side:right", "Direction:up", "Direction:down"].includes(symbol.concept));
+    const directions = inferMovementDirections(clause);
     const color = clause.find(symbol => typeof symbol.concept === "string" && symbol.concept.startsWith("Color:"));
     const mentionedShape = inferMentionedShape(clause);
     const hasShapeToken = clause.some(symbol => ["UI:ball", "UI:square", "UI:triangle", "UI:shape"].includes(symbol.concept));
@@ -785,15 +785,17 @@ function inferUiCommands(symbols) {
       activeTarget = mentionedShape;
     }
 
-    if (hasShapeContext && hasMove && direction) {
+    if (hasShapeContext && hasMove && directions.length) {
       const movement = inferMovementDistance(clause);
-      commands.push({
-        type: "move_ball",
-        target,
-        direction: direction.concept.split(":")[1],
-        distance: movement.distance,
-        unit: movement.unit,
-      });
+      for (const direction of directions) {
+        commands.push({
+          type: "move_ball",
+          target,
+          direction,
+          distance: movement.distance,
+          unit: movement.unit,
+        });
+      }
     }
 
     if (hasShapeContext && hasUpdate && color && (hasColorWord || mentionedShape || clause.some(symbol => symbol.clean === "shape") || clause.some(symbol => symbol.clean === "it"))) {
@@ -861,8 +863,10 @@ function splitClauses(symbols) {
   const clauses = [];
   let current = [];
 
-  for (const symbol of symbols) {
+  for (let index = 0; index < symbols.length; index++) {
+    const symbol = symbols[index];
     if (symbol.kind === VOCAB.kinds.CONJUNCTION && symbol.concept === "AND") {
+      if (shouldKeepCompoundMoveClause(symbols, index, current)) continue;
       if (current.length) clauses.push(current);
       current = [];
       continue;
@@ -873,6 +877,33 @@ function splitClauses(symbols) {
 
   if (current.length) clauses.push(current);
   return clauses;
+}
+
+function shouldKeepCompoundMoveClause(symbols, index, current) {
+  const hasMove = current.some(symbol => symbol.concept === VOCAB.intents.MOVE);
+  if (!hasMove) return false;
+
+  const next = symbols.slice(index + 1);
+  const nextBoundary = next.findIndex(symbol => symbol.kind === VOCAB.kinds.CONJUNCTION && symbol.concept === "AND");
+  const nextClause = nextBoundary === -1 ? next : next.slice(0, nextBoundary);
+  const hasNextAction = nextClause.some(symbol => symbol.kind === VOCAB.kinds.ACTION || symbol.kind === VOCAB.kinds.DIRECTIVE);
+  return !hasNextAction && inferMovementDirections(nextClause).length > 0;
+}
+
+function inferMovementDirections(clause) {
+  const directions = [];
+  const add = direction => {
+    if (!directions.includes(direction)) directions.push(direction);
+  };
+
+  for (const symbol of clause) {
+    if (symbol.concept === "Direction:up") add("up");
+    if (symbol.concept === "Direction:down") add("down");
+    if (symbol.concept === "Side:left") add("left");
+    if (symbol.concept === "Side:right") add("right");
+  }
+
+  return directions;
 }
 
 function inferMovementDistance(clause) {

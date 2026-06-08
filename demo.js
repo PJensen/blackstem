@@ -1091,17 +1091,24 @@ function compileSingleRuleEffect(symbols, state, fallbackTarget = null) {
     };
   }
 
-  const moveDirection = inferMoveDirection(symbols);
-  if (moveDirection) {
+  const moveDirections = inferMoveDirections(symbols);
+  if (moveDirections.length) {
     const target = symbols.map(symbol => shapeNameFromSymbol(symbol)).find(Boolean) || fallbackTarget || state.focusTarget;
     const distance = inferMoveDistance(symbols);
-    return {
+    const effects = moveDirections.map(moveDirection => ({
       type: "tool_call",
       label: `move ${target} ${moveDirection}`,
       call: {
         name: "ui_move_ball",
         arguments: { target, direction: moveDirection, distance: distance.value, unit: distance.unit },
       },
+    }));
+
+    if (effects.length === 1) return effects[0];
+    return {
+      type: "multi_tool_call",
+      label: effects.map(effect => effect.label).join(" + "),
+      effects,
     };
   }
 
@@ -1125,8 +1132,10 @@ function splitEffectClauses(symbols) {
   const clauses = [];
   let current = [];
 
-  for (const symbol of symbols) {
+  for (let index = 0; index < symbols.length; index++) {
+    const symbol = symbols[index];
     if (symbol.clean === "and") {
+      if (shouldKeepCompoundMoveClause(symbols, index, current)) continue;
       if (current.length) clauses.push(current);
       current = [];
       continue;
@@ -1137,6 +1146,17 @@ function splitEffectClauses(symbols) {
 
   if (current.length) clauses.push(current);
   return clauses;
+}
+
+function shouldKeepCompoundMoveClause(symbols, index, current) {
+  const hasMove = current.some(symbol => symbol.kind === "action" && symbol.concept === "Move");
+  if (!hasMove) return false;
+
+  const next = symbols.slice(index + 1);
+  const nextBoundary = next.findIndex(symbol => symbol.clean === "and");
+  const nextClause = nextBoundary === -1 ? next : next.slice(0, nextBoundary);
+  const hasNextOperation = nextClause.some(symbol => symbol.kind === "action" || symbol.kind === "directive");
+  return !hasNextOperation && inferDirectionWords(nextClause).length > 0;
 }
 
 function shapeRuleToolPlan(source, condition, effect, mode) {
@@ -1228,16 +1248,21 @@ function inferRotationDegrees(symbols) {
   return explicit ? (explicit.displayValue ?? explicit.value) : 45;
 }
 
-function inferMoveDirection(symbols) {
+function inferMoveDirections(symbols) {
   const hasMove = symbols.some(symbol => symbol.kind === "action" && symbol.concept === "Move");
-  if (!hasMove) return null;
+  if (!hasMove) return [];
 
+  return inferDirectionWords(symbols);
+}
+
+function inferDirectionWords(symbols) {
   const words = new Set(symbols.map(symbol => symbol.clean));
-  if (words.has("up")) return "up";
-  if (words.has("down")) return "down";
-  if (words.has("left")) return "left";
-  if (words.has("right")) return "right";
-  return null;
+  const directions = [];
+  if (words.has("up")) directions.push("up");
+  if (words.has("down")) directions.push("down");
+  if (words.has("left")) directions.push("left");
+  if (words.has("right")) directions.push("right");
+  return directions;
 }
 
 function inferMoveDistance(symbols) {
